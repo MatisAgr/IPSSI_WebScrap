@@ -1,6 +1,4 @@
 import streamlit as st
-import sys
-import os
 from pymongo.errors import PyMongoError #debug pour error mongo
 import requests
 

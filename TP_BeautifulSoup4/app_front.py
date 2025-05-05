@@ -44,7 +44,7 @@ st.divider()
 
 # lancer ./main.py
 st.subheader("🚀 Lancer un Scraping Complet")
-st.write("Démarrez un nouveau processus de scraping complet pour récupérer les derniers articles de la page d'accueil du Blog du Modérateur et les insérer dans la base de données. La sortie de la console s'affichera ci-dessous.")
+st.write("Démarrez un nouveau processus de scraping complet **(HOME & TOUTES LES CATEGORIES)** pour récupérer les derniers articles de la page d'accueil du Blog du Modérateur et les insérer dans la base de données. La sortie de la console s'affichera ci-dessous.")
 
 console_output_placeholder = st.empty()
 console_output_placeholder.code("La sortie du script apparaîtra ici...", language=None)
