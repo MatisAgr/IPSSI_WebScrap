@@ -3,9 +3,14 @@ from bs4 import BeautifulSoup # scraper
 from datetime import datetime 
 import re # regex
 
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
 
 # scrap les articles d'une catégorie
-def scrape_category_urls(base_url, headers):
+def scrape_category_urls(base_url):
+
+    global headers
 
     category_urls = []
     try:
@@ -250,6 +255,7 @@ def scrape_article_full_details(article_url, headers):
                 if meta_info_div_header:
                     # extract auteur
                     byline_span = meta_info_div_header.find('span', class_='byline')
+                    print(f"  -> byline_span: {byline_span}")
                     if byline_span:
                         author_a = byline_span.find('a')
                         data['author'] = author_a.get_text(strip=True) if author_a else None

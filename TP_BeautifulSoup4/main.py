@@ -10,12 +10,10 @@ def main():
     total_inserted_count = 0
     total_skipped_count = 0
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
+
 
     print("--- Starting Category URL Scraping ---")
-    category_urls = scraper.scrape_category_urls(base_url, headers)
+    category_urls = scraper.scrape_category_urls(base_url)
 
     if not category_urls:
         print("No category URLs found or error fetching them. Scraping only the homepage.")
@@ -37,7 +35,7 @@ def main():
         print(f"--- Scraping Category: {category_url} ---")
 
         # scraper les articles de la page de liste de la catégorie actuelle
-        scraped_articles = scraper.scrape_article_previews(category_url, headers)
+        scraped_articles = scraper.scrape_article_previews(category_url)
 
         if not scraped_articles:
             print(f"No articles were scraped from {category_url}. Moving to next category.")
