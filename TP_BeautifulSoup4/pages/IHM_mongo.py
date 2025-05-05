@@ -1,8 +1,8 @@
 import streamlit as st
 import mongo_connect as db_connector # Assurez-vous que mongo_connect.py est accessible
-from datetime import datetime, time
 import re
-from bson import ObjectId
+
+st.set_page_config(layout="wide")
 
 # --- Titre spécifique à la page ---
 st.title("🔎 Recherche d'Articles dans la Base de Données")
@@ -62,7 +62,7 @@ if articles_collection is not None:
             st.warning("Aucun article ne correspond à vos critères.")
         else:
             st.info(f"{len(filtered_articles)} article(s) trouvé(s).")
-            num_columns = 2 
+            num_columns = 2
             cols = st.columns(num_columns)
             for i, article in enumerate(filtered_articles):
                 col_index = i % num_columns

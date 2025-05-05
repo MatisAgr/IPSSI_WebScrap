@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
-import time # Import time for potential delays
 
 
 def scrape_article_details(article_url, headers):
