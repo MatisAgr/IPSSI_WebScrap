@@ -27,6 +27,8 @@ if 'category_url_processed' not in st.session_state:
 if 'selected_category_url' not in st.session_state:
      st.session_state.selected_category_url = None # Pour stocker la sélection
 
+st.set_page_config(layout="wide")
+
 st.title("🗂️ Scraper une Catégorie d'Articles")
 st.write("Choisissez une catégorie dans la liste ci-dessous pour scraper tous les articles listés sur cette page.")
 

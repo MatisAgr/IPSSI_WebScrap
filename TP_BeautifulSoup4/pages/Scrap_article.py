@@ -6,9 +6,12 @@ from pymongo.errors import PyMongoError
 import TP_BeautifulSoup4 as scraper
 import mongo_connect as db_connector
 
+
 # cache de session
 if 'article_data_to_display' not in st.session_state:
     st.session_state.article_data_to_display = None
+
+st.set_page_config(layout="wide")
 
 st.title("🚀 Scraper un Article Spécifique")
 st.write("Entrez l'URL d'un article du Blog du Modérateur pour en extraire les informations.")
