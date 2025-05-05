@@ -34,8 +34,15 @@ def main():
     skipped_count = 0
     for article_data in scraped_articles:
         try:
+            # Check if an article with the same URL already exists
+            if article_data.get('url'): 
+                existing_article = articles_collection.find_one({'url': article_data['url']})
+                if existing_article:
+                    print(f"  Skipped (already exists): {article_data.get('title', 'N/A')} (URL: {article_data['url']})")
+                    skipped_count += 1
+                    continue # Skip to the next article
 
-            # Simple insertion without duplicate check:
+            # If no URL or not found, proceed with insertion
             insert_result = articles_collection.insert_one(article_data)
             print(f"  Inserted article: {article_data.get('title', 'N/A')} (ID: {insert_result.inserted_id})")
             inserted_count += 1
