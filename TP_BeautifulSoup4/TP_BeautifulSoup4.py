@@ -4,11 +4,68 @@ from datetime import datetime
 import re
 
 
+def scrape_category_urls(base_url, headers):
+    """
+    Scrapes category URLs from the primary navigation menu.
+
+    Args:
+        base_url (str): The base URL of the website (e.g., homepage).
+        headers (dict): Headers to use for the request.
+
+    Returns:
+        list: A list of category URLs found in the menu. Returns an empty list on error.
+    """
+    category_urls = []
+    try:
+        print(f"Fetching base page to find category URLs: {base_url}...")
+        response = requests.get(base_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        primary_menu = soup.find('ul', id='primary-menu')
+        if not primary_menu:
+            print("  -> Primary menu ('ul#primary-menu') not found.")
+            return []
+
+        menu_items = primary_menu.find_all('li', class_='menu-item-object-category', recursive=False) # Look for direct li children with the specific class
+
+        if not menu_items:
+             # Fallback: try finding all 'a' tags directly within the menu if the specific li class fails
+             menu_links = primary_menu.find_all('a', href=True)
+             if not menu_links:
+                 print("  -> No category links found within the primary menu.")
+                 return []
+             menu_items = menu_links # Treat links as items for URL extraction below
+
+        print(f"Found {len(menu_items)} potential category items in the menu.")
+
+        for item in menu_items:
+             # If item is an 'a' tag directly (from fallback)
+             if item.name == 'a':
+                 link = item
+             # If item is an 'li' tag (standard case)
+             else:
+                 link = item.find('a', href=True)
+
+             if link:
+                 href = link['href']
+                 if href.startswith(base_url) and href != base_url:
+                     category_urls.append(href)
+                 elif href.startswith('/') and href != '/tools/': # Handle relative URLs if needed
+                     pass
+
+        print(f"Extracted {len(category_urls)} category URLs: {category_urls}")
+        return category_urls
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request Error fetching base page {base_url}: {e}")
+        return []
+    except Exception as e:
+        print(f"An unexpected error occurred while scraping category URLs from {base_url}: {e}")
+        return []
+
 def scrape_article_details(article_url, headers):
-    """
-    Récupère et scrape les détails (résumé, auteur, images de contenu, tags) depuis la page d'un article unique.
-    Retourne un dictionnaire avec 'summary', 'author', 'content_images', et 'tags'.
-    """
+
     summary = None
     author = None
     content_images = [] # Initialise la liste pour les images
@@ -85,8 +142,7 @@ def scrape_article_details(article_url, headers):
     except Exception as e:
         print(f"  -> Erreur Parsing lors de la récupération des détails de {article_url}: {e}")
         # Retourne les données potentiellement partielles, incluant les tags trouvés jusqu'à l'erreur
-        return {'summary': summary, 'author': author, 'content_images': content_images, 'tags': tags}
-
+        return {'summary': summary, 'author': None, 'content_images': content_images, 'tags': tags}
 
 def scrape_article_previews(listing_url):
     """
@@ -178,7 +234,6 @@ def scrape_article_previews(listing_url):
     except Exception as e:
         print(f"An unexpected error occurred while scraping {listing_url}: {e}")
         return []
-
 
 def scrape_article_full_details(article_url, headers):
     # Initialisation du dictionnaire avec toutes les clés attendues

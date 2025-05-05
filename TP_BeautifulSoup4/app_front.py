@@ -15,14 +15,15 @@ st.sidebar.success("Sélectionnez une page ci-dessus.")
 st.write("# Bienvenue sur l'outil BDM Scraper & Explorer ! 👋")
 st.divider()
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 # redirection vers ./pages/IHM_mongo.py
 with col1:
     with st.container(border=True):
         st.subheader("📊 Explorer les Articles")
-        st.write("Recherchez, filtrez et visualisez les articles déjà stockés dans la base de données MongoDB.")
+        st.write("Recherchez, filtrez et visualisez les articles stockés dans la BDD MongoDB.")
         st.page_link("pages/IHM_mongo.py", label="Accéder à l'Explorateur", icon="🔎", use_container_width=True)
+
 
 # redirection vers ./pages/Scrap_article.py
 with col2:
@@ -30,6 +31,15 @@ with col2:
         st.subheader("⚙️ Scraper un Article Spécifique")
         st.write("Scrapez les détails complets d'un seul article en fournissant son URL.")
         st.page_link("pages/Scrap_article.py", label="Scraper un Article", icon="🎯", use_container_width=True)
+
+
+# redirection vers ./pages/Scrap_category.py
+with col3:
+    with st.container(border=True):
+        st.subheader("🗂️ Scraper par Catégorie")
+        st.write("Scrapez tous les articles listés sur une page de catégorie spécifique.")
+        st.page_link("pages/Scrap_category.py", label="Scraper une Catégorie", icon="📚", use_container_width=True)
+
 
 st.divider()
 
