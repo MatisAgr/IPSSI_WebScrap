@@ -1,27 +1,23 @@
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-MONGO_URI = "mongodb://localhost:27017/"  # Default MongoDB URI for localhost
+#CONFIG
+MONGO_URI = "mongodb://localhost:27017/" 
 DATABASE_NAME = "ipssi_webscraping"
 COLLECTION_NAME = "data"
 
+# connection mangodb
 def connect_to_mongo():
-    """
-    Connects to the local MongoDB instance and returns the specified collection object.
-    Returns None if the connection fails.
-    """
     try:
-        # Create a new client and connect to the server
+        # création client mongo
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000) # Timeout after 5 seconds
-
-        # The ismaster command is cheap and does not require auth.
         client.admin.command('ismaster')
         print("MongoDB connection successful!")
 
-        # Access the database
+        # accès à la database
         db = client[DATABASE_NAME]
 
-        # Access the collection
+        # accès à la table
         collection = db[COLLECTION_NAME]
         print(f"Successfully accessed database '{DATABASE_NAME}' and collection '{COLLECTION_NAME}'.")
 
@@ -34,8 +30,8 @@ def connect_to_mongo():
         print(f"An error occurred: {e}")
         return None
 
+# insert la data dans la bdd
 def insert_sample_data(collection, sample_data):
-    """Inserts a sample document into the collection."""
     if collection is None:
         print("Cannot insert data, collection object is None.")
         return None
@@ -47,8 +43,8 @@ def insert_sample_data(collection, sample_data):
         print(f"Error inserting data: {e}")
         return None
 
+# récup la data de la bdd
 def find_all_data(collection):
-    """Finds and prints all documents in the collection."""
     if collection is None:
         print("Cannot find data, collection object is None.")
         return
@@ -66,7 +62,6 @@ def find_all_data(collection):
         print(f"Error finding data: {e}")
 
 
-# --- Main Execution Example ---
 if __name__ == "__main__":
     data_collection = connect_to_mongo()
 

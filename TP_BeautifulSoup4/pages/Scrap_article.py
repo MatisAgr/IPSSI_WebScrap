@@ -1,24 +1,24 @@
 import streamlit as st
-import TP_BeautifulSoup4 as scraper
 import requests
-import mongo_connect as db_connector
 from pymongo.errors import PyMongoError
 
-# --- Initialiser l'état de session si nécessaire ---
+# custom
+import TP_BeautifulSoup4 as scraper
+import mongo_connect as db_connector
+
+# cache de session
 if 'article_data_to_display' not in st.session_state:
     st.session_state.article_data_to_display = None
 
-# --- Titre spécifique à la page ---
 st.title("🚀 Scraper un Article Spécifique")
 st.write("Entrez l'URL d'un article du Blog du Modérateur pour en extraire les informations.")
 
-# --- Champ d'entrée pour l'URL ---
+# input url
 article_url = st.text_input("URL de l'article à scraper", placeholder="https://www.blogdumoderateur.com/...", key="scrape_url")
 
-# --- Bouton pour lancer le scraping ---
+# bouton start scraping (article)
 scrape_button = st.button("Scraper cet Article", key="scrape_button")
 
-# --- Logique de scraping ---
 if scrape_button and article_url:
     if not article_url.startswith("https://www.blogdumoderateur.com/"):
         st.warning("Veuillez entrer une URL valide commençant par 'https://www.blogdumoderateur.com/'")
@@ -33,12 +33,12 @@ if scrape_button and article_url:
 
                 if article_data is None or article_data.get('title') is None:
                      st.error("Impossible de scraper les détails de cet article. Vérifiez l'URL ou la structure de la page.")
-                     st.session_state.article_data_to_display = None # Réinitialiser en cas d'échec
+                     st.session_state.article_data_to_display = None
                 else:
                     st.success("Scraping terminé !")
-                    # !! Stocker les données dans l'état de session !!
                     st.session_state.article_data_to_display = article_data
 
+            # gestion des exceptions
             except requests.exceptions.RequestException as e:
                 st.error(f"Erreur de requête lors du scraping : {e}")
                 st.session_state.article_data_to_display = None
@@ -48,18 +48,17 @@ if scrape_button and article_url:
 
 elif scrape_button and not article_url:
     st.warning("Veuillez entrer une URL.")
-    st.session_state.article_data_to_display = None # Réinitialiser si l'URL est vide
+    st.session_state.article_data_to_display = None # reset
 
-# --- Affichage des résultats ET bouton de sauvegarde (basé sur l'état de session) ---
+# si l'article a été scrappé, afficher les détails 
 if st.session_state.article_data_to_display:
-    # Récupérer les données depuis l'état de session
     article_data = st.session_state.article_data_to_display
 
-    # Afficher les informations récupérées (même code qu'avant)
+    # utiliser titre sinon url
     if article_data.get("title"):
         st.subheader(f"Article : {article_data['title']}")
     else:
-         st.subheader(f"Détails pour : {article_data['url']}") # Utiliser l'URL si pas de titre
+         st.subheader(f"Détails pour : {article_data['url']}")
 
     if article_data.get("thumbnail"):
         st.image(article_data["thumbnail"], caption="Image principale", use_column_width=True)
@@ -85,22 +84,17 @@ if st.session_state.article_data_to_display:
     else:
         st.write("Aucune image trouvée dans le contenu.")
 
-    # Bouton pour sauvegarder dans MongoDB (maintenant il est atteint même après un clic)
     st.divider()
     if st.button("Sauvegarder cet article dans MongoDB", key="save_scraped"):
         collection = db_connector.connect_to_mongo()
         if collection is not None:
             try:
-                # Utiliser les données de l'état de session pour la sauvegarde
                 existing = collection.find_one({'url': article_data['url']})
                 if existing:
                     st.warning(f"Cet article (URL: {article_data['url']}) existe déjà dans la base de données (ID: {existing['_id']}).")
                 else:
                     insert_result = collection.insert_one(article_data)
                     st.success(f"Article sauvegardé avec succès ! (ID: {insert_result.inserted_id})")
-                    # Optionnel : Réinitialiser l'état après sauvegarde réussie pour éviter double sauvegarde accidentelle
-                    # st.session_state.article_data_to_display = None
-                    # st.rerun() # Forcer un rechargement pour nettoyer l'affichage
             except PyMongoError as e:
                 st.error(f"Erreur MongoDB lors de la sauvegarde : {e}")
             except Exception as e:

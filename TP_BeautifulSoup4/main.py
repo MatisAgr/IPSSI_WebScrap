@@ -1,8 +1,8 @@
+from pymongo.errors import PyMongoError
+
+# custom
 import TP_BeautifulSoup4 as scraper
 import mongo_connect as db_connector
-
-
-from pymongo.errors import PyMongoError
 
 def main():
     base_url = "https://www.blogdumoderateur.com/"
@@ -10,7 +10,6 @@ def main():
     total_inserted_count = 0
     total_skipped_count = 0
 
-    # Define headers once
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
@@ -20,51 +19,47 @@ def main():
 
     if not category_urls:
         print("No category URLs found or error fetching them. Scraping only the homepage.")
-        # Optionally, add the base_url itself to scrape the homepage if categories fail
-        category_urls = [base_url] # Or decide to exit if categories are mandatory
+        category_urls = [base_url]
     else:
         print(f"Found {len(category_urls)} categories to scrape.")
-        # Optional: Add homepage scraping as well if desired
-        # if base_url not in category_urls:
-        #     category_urls.insert(0, base_url) # Add homepage at the beginning
+        print(f"Category URLs: {category_urls}")
 
     print("--- Connecting to MongoDB ---")
     articles_collection = db_connector.connect_to_mongo()
 
     if articles_collection is None:
         print("Failed to connect to MongoDB. Cannot save data. Exiting.")
-        return # Exit if DB connection failed
+        return
 
     print("--- Starting Article Scraping for Each Category ---")
 
-    # Iterate through each category URL found
     for category_url in category_urls:
         print(f"--- Scraping Category: {category_url} ---")
 
-        # Scrape articles from the current category listing page
-        scraped_articles = scraper.scrape_article_previews(category_url) # Pass headers if needed by scrape_article_previews
+        # scraper les articles de la page de liste de la catégorie actuelle
+        scraped_articles = scraper.scrape_article_previews(category_url, headers)
 
         if not scraped_articles:
             print(f"No articles were scraped from {category_url}. Moving to next category.")
-            continue # Skip to the next category
+            continue # skip la catégorie si aucun article n'est trouvé
 
         print(f"--- Scraping finished for {category_url}. Found {len(scraped_articles)} articles. ---")
         print("--- Inserting scraped articles into MongoDB ---")
 
-        # Insert articles from this category into the collection
+        # preparer les données pour l'insertion dans MongoDB
         inserted_count = 0
         skipped_count = 0
         for article_data in scraped_articles:
             try:
-                # Check if an article with the same URL already exists
+                # éviter les doublons en vérifiant l'URL
                 if article_data.get('url'):
                     existing_article = articles_collection.find_one({'url': article_data['url']})
                     if existing_article:
                         # print(f"  Skipped (already exists): {article_data.get('title', 'N/A')} (URL: {article_data['url']})")
                         skipped_count += 1
-                        continue # Skip to the next article
+                        continue
 
-                # If no URL or not found, proceed with insertion
+                # si l'article n'existe pas, insérer dans la collection
                 insert_result = articles_collection.insert_one(article_data)
                 # print(f"  Inserted article: {article_data.get('title', 'N/A')} (ID: {insert_result.inserted_id})")
                 inserted_count += 1
@@ -90,6 +85,5 @@ def main():
     print(f"Total skipped or failed across all categories: {total_skipped_count} articles.")
     print("---------------------------------------")
 
-# --- Run the main function ---
 if __name__ == "__main__":
     main()

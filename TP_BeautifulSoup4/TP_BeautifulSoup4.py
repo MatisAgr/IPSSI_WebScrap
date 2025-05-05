@@ -1,20 +1,12 @@
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
-import re
+import requests # requêtes HTTP
+from bs4 import BeautifulSoup # scraper
+from datetime import datetime 
+import re # regex
 
 
+# scrap les articles d'une catégorie
 def scrape_category_urls(base_url, headers):
-    """
-    Scrapes category URLs from the primary navigation menu.
 
-    Args:
-        base_url (str): The base URL of the website (e.g., homepage).
-        headers (dict): Headers to use for the request.
-
-    Returns:
-        list: A list of category URLs found in the menu. Returns an empty list on error.
-    """
     category_urls = []
     try:
         print(f"Fetching base page to find category URLs: {base_url}...")
@@ -30,20 +22,18 @@ def scrape_category_urls(base_url, headers):
         menu_items = primary_menu.find_all('li', class_='menu-item-object-category', recursive=False) # Look for direct li children with the specific class
 
         if not menu_items:
-             # Fallback: try finding all 'a' tags directly within the menu if the specific li class fails
+             # si pas de 'li' trouvé, on cherche tous les 'a'
              menu_links = primary_menu.find_all('a', href=True)
              if not menu_links:
                  print("  -> No category links found within the primary menu.")
                  return []
-             menu_items = menu_links # Treat links as items for URL extraction below
+             menu_items = menu_links # mettre les liens comme items de menu
 
         print(f"Found {len(menu_items)} potential category items in the menu.")
 
         for item in menu_items:
-             # If item is an 'a' tag directly (from fallback)
              if item.name == 'a':
                  link = item
-             # If item is an 'li' tag (standard case)
              else:
                  link = item.find('a', href=True)
 
@@ -51,7 +41,7 @@ def scrape_category_urls(base_url, headers):
                  href = link['href']
                  if href.startswith(base_url) and href != base_url:
                      category_urls.append(href)
-                 elif href.startswith('/') and href != '/tools/': # exclure les liens /tools/
+                 elif href.startswith('/') and href != '/tools/': # exclure les liens /tools/ (pas d'articles)
                      pass
 
         print(f"Extracted {len(category_urls)} category URLs: {category_urls}")
@@ -64,26 +54,26 @@ def scrape_category_urls(base_url, headers):
         print(f"An unexpected error occurred while scraping category URLs from {base_url}: {e}")
         return []
 
+# scrap les détails d'un article (en complément des aperçus)
 def scrape_article_details(article_url, headers):
 
     summary = None
     author = None
-    content_images = [] # Initialise la liste pour les images
-    tags = []           # Initialise la liste pour les tags
+    content_images = []
+    tags = []
     try:
         # time.sleep(0.5) # Délai optionnel
         response = requests.get(article_url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # --- Extraire le Résumé (Chapeau) ---
+        # extract résumé
         summary_div = soup.find('div', class_='article-hat')
         summary_p = summary_div.find('p') if summary_div else None
         summary = summary_p.get_text(strip=True) if summary_p else None
 
-        # --- Extraire l'Auteur ---
-        # Cherche dans l'en-tête principal d'abord pour plus de précision
-        main_header = soup.find('header', class_='article-header')
+        # extract auteur
+        main_header = soup.find('header', class_='article-header') # zone d'en-tête de l'article
         if main_header:
             meta_section = main_header.find('div', class_='entry-meta', recursive=False)
             if meta_section:
@@ -93,18 +83,9 @@ def scrape_article_details(article_url, headers):
                     if byline_span:
                         author_a = byline_span.find('a')
                         author = author_a.get_text(strip=True) if author_a else None
-        # Fallback si non trouvé dans l'en-tête (moins précis)
-        if author is None:
-            meta_info_div_fallback = soup.find('div', class_='meta-info') # Recherche globale
-            if meta_info_div_fallback:
-                byline_span = meta_info_div_fallback.find('span', class_='byline')
-                if byline_span:
-                    author_a = byline_span.find('a')
-                    author = author_a.get_text(strip=True) if author_a else None
 
-
-        # --- Extraire les Images du Contenu ---
-        content_div = soup.find('div', class_='entry-content') # Trouve la zone de contenu principal
+        # extract image de l'article
+        content_div = soup.find('div', class_='entry-content') # zone de contenu principal
         if content_div:
             figures = content_div.find_all('figure')
             if figures:
@@ -116,7 +97,8 @@ def scrape_article_details(article_url, headers):
                         figcaption = figure.find('figcaption')
                         caption = figcaption.get_text(strip=True) if figcaption else img_tag.get('alt', '')
                         content_images.append({'url': img_url, 'caption_or_alt': caption})
-            else: # Fallback
+                        
+            else: # fallback
                 images_in_content = content_div.find_all('img')
                 for img_tag in images_in_content:
                     img_url = img_tag.get('data-lazy-src') or img_tag.get('src')
@@ -124,7 +106,7 @@ def scrape_article_details(article_url, headers):
                     caption = img_tag.get('alt', '')
                     content_images.append({'url': img_url, 'caption_or_alt': caption})
 
-        # --- Extraire les Tags/Catégories (en bas de page) ---
+        # extract Tags/Catégories
         terms_div = soup.find('div', class_='article-terms')
         if terms_div:
             tags_list_ul = terms_div.find('ul', class_='tags-list')
@@ -135,39 +117,28 @@ def scrape_article_details(article_url, headers):
 
         return {'summary': summary, 'author': author, 'content_images': content_images, 'tags': tags}
 
+    # gestion des exceptions
     except requests.exceptions.RequestException as e:
         print(f"  -> Erreur Requête lors de la récupération des détails de {article_url}: {e}")
-        # Retourne le dict par défaut avec les listes vides
         return {'summary': None, 'author': None, 'content_images': [], 'tags': []}
     except Exception as e:
         print(f"  -> Erreur Parsing lors de la récupération des détails de {article_url}: {e}")
-        # Retourne les données potentiellement partielles, incluant les tags trouvés jusqu'à l'erreur
         return {'summary': summary, 'author': None, 'content_images': content_images, 'tags': tags}
 
+# scrap les aperçus d'articles d'une page de liste
 def scrape_article_previews(listing_url):
-    """
-    Scrapes article previews from a listing page on blogdumoderateur.com,
-    then fetches details (summary, author, content images, tags) from each article's page.
-
-    Args:
-        listing_url (str): The URL of the listing page.
-
-    Returns:
-        list: A list of dictionaries, each containing data for one article.
-              Returns an empty list if scraping fails or no articles are found.
-    """
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
     articles_data = []
-
+    
     try:
         print(f"Fetching listing page: {listing_url}...")
         response = requests.get(listing_url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        article_tags_html = soup.find_all('article', class_=re.compile(r'\bpost-\d+\b')) # Renommé pour éviter confusion avec les tags de catégorie
+        article_tags_html = soup.find_all('article', class_=re.compile(r'\bpost-\d+\b'))
 
         if not article_tags_html:
             print(f"No article previews found on {listing_url} with the selector.")
@@ -175,11 +146,11 @@ def scrape_article_previews(listing_url):
 
         print(f"Found {len(article_tags_html)} article previews. Now fetching details (summary, author, images, tags)...")
 
-        for idx, article_html in enumerate(article_tags_html): # Utilise le nouveau nom de variable
+        for idx, article_html in enumerate(article_tags_html):
             data = {}
             print(f"Processing preview {idx+1}/{len(article_tags_html)}...")
 
-            # --- Extract data from the preview ---
+            # extract data de la preview
             header = article_html.find('header', class_='entry-header')
             a_tag = header.find('a') if header else None
             data['url'] = a_tag['href'] if a_tag and a_tag.has_attr('href') else None
@@ -207,15 +178,14 @@ def scrape_article_previews(listing_url):
                  data['date_display'] = None
                  data['date_iso'] = None
 
-            # --- Fetch and scrape details (summary, author, images, TAGS) from the article page ---
+            #appel le scrape_article_details pour récupérer les détails supplémentaires
             data['summary'] = None
             data['author'] = None
             data['content_images'] = []
-            data['tags'] = [] # Initialise la liste des tags
+            data['tags'] = []
             if data['url']:
                 print(f"  Fetching details for: {data['title'] or data['url']}")
-                # time.sleep(0.2)
-                details = scrape_article_details(data['url'], headers) # Appel de la fonction modifiée
+                details = scrape_article_details(data['url'], headers)
                 data['summary'] = details.get('summary')
                 data['author'] = details.get('author')
                 data['content_images'] = details.get('content_images', [])
@@ -228,6 +198,7 @@ def scrape_article_previews(listing_url):
 
         return articles_data
 
+    # gestion des exceptions
     except requests.exceptions.RequestException as e:
         print(f"Request Error fetching listing page {listing_url}: {e}")
         return []
@@ -235,8 +206,10 @@ def scrape_article_previews(listing_url):
         print(f"An unexpected error occurred while scraping {listing_url}: {e}")
         return []
 
+# scrap les détails complets d'un article (sans complément et sans passer par l'aperçu)
+# utilisé dans ./pages/Scrap_article.py
 def scrape_article_full_details(article_url, headers):
-    # Initialisation du dictionnaire avec toutes les clés attendues
+
     data = {
         'url': article_url,
         'title': None,
@@ -245,43 +218,42 @@ def scrape_article_full_details(article_url, headers):
         'date_display': None,
         'date_iso': None,
         'thumbnail': None,
-        'category': None, # Sera défini comme le premier tag trouvé
-        'tags': [],       # Liste complète des tags
+        'category': None, # sera défini comme le premier tag trouvé
+        'tags': [],
         'content_images': []
     }
-
+    
     try:
         # time.sleep(0.5) # Délai optionnel
         response = requests.get(article_url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # --- Trouver l'en-tête principal de l'article ---
+        # recup le header de l'article
         main_header = soup.find('header', class_='article-header')
         if not main_header:
             print(f"  -> Attention : En-tête principal ('header.article-header') non trouvé sur {article_url}")
-            # Essayer quand même de trouver les autres infos ci-dessous
         else:
-            # --- Extraire le Titre ---
+            # extract titre
             title_tag = main_header.find('h1', class_='entry-title')
             data['title'] = title_tag.get_text(strip=True) if title_tag else None
 
-            # --- Extraire le Résumé (Chapeau) ---
+            # extract résumé
             summary_div = main_header.find('div', class_='article-hat')
             summary_p = summary_div.find('p') if summary_div else None
             data['summary'] = summary_p.get_text(strip=True) if summary_p else None
 
-            # --- Extraire l'Auteur & la Date (Tentative 1: dans le header) ---
+            # extract auteur & date
             meta_section_header = main_header.find('div', class_='entry-meta', recursive=False)
             if meta_section_header:
                 meta_info_div_header = meta_section_header.find('div', class_='meta-info')
                 if meta_info_div_header:
-                    # Auteur
+                    # extract auteur
                     byline_span = meta_info_div_header.find('span', class_='byline')
                     if byline_span:
                         author_a = byline_span.find('a')
                         data['author'] = author_a.get_text(strip=True) if author_a else None
-                    # Date
+                    # extract date
                     posted_on_span = meta_info_div_header.find('span', class_='posted-on')
                     if posted_on_span:
                         time_tag = posted_on_span.find('time', class_='published')
@@ -290,48 +262,18 @@ def scrape_article_full_details(article_url, headers):
                             if time_tag.has_attr('datetime'):
                                 try:
                                     date_iso_str = time_tag['datetime']
-                                    # Essayer de parser et formater
                                     data['date_iso'] = datetime.fromisoformat(date_iso_str.replace(' ', 'T')).strftime('%Y-%m-%d')
                                 except ValueError:
-                                    pass # Laisser None si le format est inattendu
+                                    pass
 
-            # --- Extraire la Miniature / Image d'en-tête ---
+            # extract miniature / (normalment image de preview)
             figure_hat_img = main_header.find('figure', class_='article-hat-img')
             if figure_hat_img:
                 img_tag = figure_hat_img.find('img')
                 if img_tag:
                     data['thumbnail'] = img_tag.get('data-lazy-src') or img_tag.get('src')
 
-        # --- Extraire l'Auteur & la Date (Tentative 2: dans article-social-content, si non trouvés avant) ---
-        if data['author'] is None or data['date_iso'] is None:
-            social_content_div = soup.find('div', class_='article-social-content')
-            if social_content_div:
-                meta_info_div_social = social_content_div.find('div', class_='meta-info')
-                if meta_info_div_social:
-                    # Auteur (si pas déjà trouvé)
-                    if data['author'] is None:
-                        byline_span = meta_info_div_social.find('span', class_='byline')
-                        if byline_span:
-                            author_a = byline_span.find('a')
-                            data['author'] = author_a.get_text(strip=True) if author_a else None
-                    # Date (si pas déjà trouvée)
-                    if data['date_iso'] is None:
-                        posted_on_span = meta_info_div_social.find('span', class_='posted-on')
-                        if posted_on_span:
-                            time_tag = posted_on_span.find('time', class_='published') # ou 'entry-date'
-                            if not time_tag: # Essayer avec 'entry-date' comme classe alternative
-                                time_tag = posted_on_span.find('time', class_='entry-date')
-                            if time_tag:
-                                data['date_display'] = time_tag.get_text(strip=True)
-                                if time_tag.has_attr('datetime'):
-                                    try:
-                                        date_iso_str = time_tag['datetime']
-                                        # Essayer de parser et formater (gère T ou espace comme séparateur)
-                                        data['date_iso'] = datetime.fromisoformat(date_iso_str.replace(' ', 'T')).strftime('%Y-%m-%d')
-                                    except ValueError:
-                                        pass # Laisser None si le format est inattendu
-
-        # --- Extraire les Images du Contenu ---
+        # extract images de l'article
         content_div = soup.find('div', class_='entry-content')
         if content_div:
             figures = content_div.find_all('figure')
@@ -352,7 +294,7 @@ def scrape_article_full_details(article_url, headers):
                     caption = img_tag.get('alt', '')
                     data['content_images'].append({'url': img_url, 'caption_or_alt': caption})
 
-        # --- Extraire les Tags/Catégories (en bas de page) ---
+        # extract Tags/Catégories
         terms_div = soup.find('div', class_='article-terms')
         if terms_div:
             tags_list_ul = terms_div.find('ul', class_='tags-list')
@@ -363,13 +305,13 @@ def scrape_article_full_details(article_url, headers):
                     if data['tags']:
                         data['category'] = data['tags'][0]
 
-        return data # Retourne le dictionnaire avec toutes les données trouvées
+        return data
 
+    # gestion des exceptions
     except requests.exceptions.RequestException as e:
         print(f"  -> Erreur Requête lors de la récupération des détails complets de {article_url}: {e}")
         return None # Indique l'échec
     except Exception as e:
         print(f"  -> Erreur Parsing lors de la récupération des détails complets de {article_url}: {e}")
-        # Retourne les données potentiellement partielles trouvées jusqu'à l'erreur
         return data
 

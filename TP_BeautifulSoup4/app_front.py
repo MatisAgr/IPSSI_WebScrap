@@ -53,27 +53,21 @@ if st.button("Lancer le Scraping Complet", use_container_width=True, type="prima
     console_output = ""
     console_output_placeholder.code("Lancement du scraping...", language=None)
     try:
-        # Détermine le chemin vers le script main.py
+        # chemin main.py
         script_path = os.path.join(os.path.dirname(__file__), "main.py")
-        # Utilise l'interpréteur Python actuel pour exécuter le script
         process = subprocess.Popen(
             [sys.executable, script_path],
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Redirige stderr vers stdout
+            stderr=subprocess.STDOUT, # récupérer les erreurs dans la sortie standard
             text=True,
-            # --- Modification ici ---
             encoding='utf-8',
-            errors='replace', # Remplace les caractères invalides par '?'
-            # -----------------------
-            bufsize=1 # Line-buffered
+            errors='replace', #  caractères invalides -> '?'
+            bufsize=1 # ligne par ligne
         )
 
-        # Lit la sortie ligne par ligne et l'affiche en temps réel
         for line in iter(process.stdout.readline, ''):
             console_output += line
             console_output_placeholder.code(console_output, language=None)
-            # Optionnel: petit délai pour le rafraîchissement Streamlit
-            # time.sleep(0.01)
 
         process.stdout.close()
         return_code = process.wait()
@@ -92,10 +86,9 @@ if st.button("Lancer le Scraping Complet", use_container_width=True, type="prima
         st.error(error_msg)
     except Exception as e:
         error_msg = f"Une erreur inattendue est survenue : {e}"
-        # Afficher l'erreur dans la console simulée aussi
-        if console_output: # S'il y a déjà eu de la sortie
+        if console_output:
                 console_output += f"\n{error_msg}"
-        else: # Si l'erreur survient avant toute sortie
+        else:
                 console_output = error_msg
         console_output_placeholder.code(console_output, language=None)
         st.error(error_msg)
