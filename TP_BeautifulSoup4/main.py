@@ -28,25 +28,26 @@ def main():
     if articles_collection is None:
         print("Failed to connect to MongoDB. Cannot save data. Exiting.")
         return
-
+    
     print("--- Starting Article Scraping for Each Category ---")
 
     for category_url in category_urls:
         print(f"--- Scraping Category: {category_url} ---")
 
-        # scraper les articles de la page de liste de la catégorie actuelle
-        scraped_articles = scraper.scrape_article_previews(category_url)
+        # Utiliser la nouvelle fonction fusionnée
+        scraped_articles = scraper.scrape_articles_from_listing(category_url)
 
         if not scraped_articles:
             print(f"No articles were scraped from {category_url}. Moving to next category.")
             continue # skip la catégorie si aucun article n'est trouvé
 
-        print(f"--- Scraping finished for {category_url}. Found {len(scraped_articles)} articles. ---")
+        print(f"--- Scraping finished for {category_url}. Found {len(scraped_articles)} articles with details. ---")
         print("--- Inserting scraped articles into MongoDB ---")
 
         # preparer les données pour l'insertion dans MongoDB
         inserted_count = 0
         skipped_count = 0
+    
         for article_data in scraped_articles:
             try:
                 # éviter les doublons en vérifiant l'URL

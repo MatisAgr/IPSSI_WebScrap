@@ -70,7 +70,7 @@ if st.session_state.article_data_to_display:
     if meta_info: st.write(" | ".join(meta_info))
 
     if article_data.get("summary"):
-        st.write("**Résumé (Chapeau) :**")
+        st.write("**Résumé :**")
         st.info(article_data["summary"])
     else:
         st.warning("Résumé non trouvé.")

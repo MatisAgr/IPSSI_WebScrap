@@ -10,15 +10,12 @@ import mongo_connect as db_connector
 
 #CONFIG
 BASE_URL = "https://www.blogdumoderateur.com/"
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-}
 
 # récupérer les URLs des catégories
 @st.cache_data(ttl=3600) # cache 1 heure
 def get_category_urls():
     print("Attempting to fetch category URLs...")
-    urls = scraper.scrape_category_urls(BASE_URL, HEADERS)
+    urls = scraper.scrape_category_urls(BASE_URL)
     print(f"Fetched URLs: {urls}")
     return urls
 
@@ -56,21 +53,22 @@ scrape_category_button = st.button(
 
 if scrape_category_button and st.session_state.selected_category_url:
     selected_url = st.session_state.selected_category_url
-    with st.spinner(f"Scraping de la catégorie : {selected_url}..."):
+    with st.spinner(f"Scraping de la catégorie et des détails des articles : {selected_url}..."):
         try:
-            articles_data = scraper.scrape_article_previews(selected_url)
+            # Utiliser la nouvelle fonction fusionnée
+            articles_data = scraper.scrape_articles_from_listing(selected_url)
 
             if not articles_data:
                 st.warning("Aucun article trouvé sur cette page ou erreur lors du scraping.")
                 st.session_state.category_articles_to_display = None
                 st.session_state.category_url_processed = ""
             else:
-                st.success(f"Scraping terminé ! {len(articles_data)} article(s) trouvé(s).")
+                st.success(f"Scraping terminé ! {len(articles_data)} article(s) trouvé(s) avec leurs détails.")
                 st.session_state.category_articles_to_display = articles_data
                 st.session_state.category_url_processed = selected_url
 
         except requests.exceptions.RequestException as e:
-            st.error(f"Erreur de requête lors du scraping : {e}")
+            st.error(f"Erreur de requête lors du scraping de la catégorie : {e}")
             st.session_state.category_articles_to_display = None
             st.session_state.category_url_processed = ""
         except Exception as e:
