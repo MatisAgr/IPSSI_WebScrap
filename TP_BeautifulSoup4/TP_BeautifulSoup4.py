@@ -83,7 +83,8 @@ def scrape_article_details(article_url, headers):
         # extract auteur
         main_header = soup.find('header', class_='article-header') # zone d'en-tête de l'article
         if main_header:
-            meta_section = main_header.find('div', class_='entry-meta', recursive=False)
+            # Utiliser une regex pour trouver la classe et chercher récursivement (comportement par défaut)
+            meta_section = main_header.find('div', class_=re.compile(r'\bentry-meta\b'))
             if meta_section:
                 meta_info_div = meta_section.find('div', class_='meta-info')
                 if meta_info_div:
@@ -262,7 +263,7 @@ def scrape_article_full_details(article_url, headers):
             data['summary'] = summary_p.get_text(strip=True) if summary_p else None
 
             # extract auteur & date
-            meta_section_header = main_header.find('div', class_='entry-meta', recursive=False)
+            meta_section_header = main_header.find('div', class_=re.compile(r'\bentry-meta\b'))
             if meta_section_header:
                 meta_info_div_header = meta_section_header.find('div', class_='meta-info')
                 if meta_info_div_header:
