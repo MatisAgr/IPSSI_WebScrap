@@ -118,7 +118,7 @@ def scrape_article_previews(listing_url):
             data = {}
             print(f"Processing preview {idx+1}/{len(article_tags)}...")
 
-            # --- Extract data from the preview ---
+            # --- Extract data from the preview ".com/"---
             header = article.find('header', class_='entry-header')
             a_tag = header.find('a') if header else None
             data['url'] = a_tag['href'] if a_tag and a_tag.has_attr('href') else None
@@ -179,30 +179,3 @@ def scrape_article_previews(listing_url):
         print(f"An unexpected error occurred while scraping {listing_url}: {e}")
         return []
 
-
-# --- Main Execution ---
-# Use a category/listing page URL or the homepage
-listing_page_url = "https://www.blogdumoderateur.com" # Example: Homepage
-
-print(f"Scraping article previews and details from: {listing_page_url}")
-scraped_articles = scrape_article_previews(listing_page_url)
-
-if scraped_articles:
-    print(f"\n--- Scraped {len(scraped_articles)} Articles ---")
-    for idx, article_data in enumerate(scraped_articles):
-        print(f"\n--- Article {idx+1} ---")
-        for key, value in article_data.items():
-             if key == 'content_images':
-                 print(f"  {key.replace('_', ' ').capitalize()}:")
-                 if value:
-                     for img_idx, img_data in enumerate(value):
-                         print(f"    Image {img_idx+1}:")
-                         print(f"      URL: {img_data['url']}")
-                         print(f"      Caption/Alt: {img_data['caption_or_alt']}")
-                 else:
-                     print("    No content images found.")
-             else:
-                 print(f"  {key.replace('_', ' ').capitalize()}: {value}")
-    print("--------------------\n")
-else:
-    print("Failed to scrape any articles or none were found.")
