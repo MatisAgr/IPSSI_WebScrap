@@ -2,6 +2,8 @@
 
 Ce projet est un outil de web scraping conçu pour extraire des informations d'articles du site "Blog du Modérateur" (blogdumoderateur.com) et les stocker dans une base de données MongoDB. Il fournit également une interface web simple construite avec Streamlit pour lancer des scrapings et explorer les données collectées.
 
+![image](https://github.com/user-attachments/assets/2e6569bb-b4e9-4792-aad8-0c642034cc35)
+
 ## Fonctionnalités
 
 *   **Scraping de Catégories :** Extrait les URL de toutes les catégories d'articles depuis le menu principal.
