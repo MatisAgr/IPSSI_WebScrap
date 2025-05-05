@@ -51,7 +51,7 @@ def scrape_category_urls(base_url, headers):
                  href = link['href']
                  if href.startswith(base_url) and href != base_url:
                      category_urls.append(href)
-                 elif href.startswith('/') and href != '/tools/': # Handle relative URLs if needed
+                 elif href.startswith('/') and href != '/tools/': # exclure les liens /tools/
                      pass
 
         print(f"Extracted {len(category_urls)} category URLs: {category_urls}")

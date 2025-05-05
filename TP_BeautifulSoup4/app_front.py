@@ -1,8 +1,7 @@
 import streamlit as st
-import subprocess # Pour exécuter le script main.py
-import sys # Pour obtenir le chemin de l'exécutable python
-import os # Pour construire le chemin vers main.py
-import time # Importer time si vous utilisez time.sleep
+import subprocess # pour exécuter un script Python
+import sys
+import os # pour aller à un fichier 
 
 st.set_page_config(
     layout="wide",
@@ -12,7 +11,7 @@ st.set_page_config(
 
 st.sidebar.success("Sélectionnez une page ci-dessus.")
 
-st.write("# Bienvenue sur l'outil BDM Scraper & Explorer ! 👋")
+st.write("# Bienvenue sur l'outil BDM Scraper ! 🤖")
 st.divider()
 
 col1, col2, col3 = st.columns(3)
