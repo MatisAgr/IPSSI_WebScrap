@@ -41,12 +41,11 @@ def build_mongo_query(start_date, end_date, author, category, title_substring):
 
 # --- Interface de Filtrage dans la Sidebar ---
 st.sidebar.header("🔍 Filtres de Recherche")
+title_input = st.sidebar.text_input("Titre", key="search_title")
+author_input = st.sidebar.text_input("Auteur", key="search_author")
+category_input = st.sidebar.text_input("Catégorie", key="search_category")
 start_date_input = st.sidebar.date_input("Date de début", value=None, key="search_start_date")
 end_date_input = st.sidebar.date_input("Date de fin", value=None, key="search_end_date")
-author_input = st.sidebar.text_input("Auteur contient", key="search_author")
-category_input = st.sidebar.text_input("Catégorie/Sous-catégorie contient", key="search_category")
-title_input = st.sidebar.text_input("Titre contient", key="search_title")
-# apply_filters = st.sidebar.button("Appliquer les Filtres", key="search_apply") # Le bouton n'est pas strictement nécessaire
 
 # --- Affichage des Articles ---
 if articles_collection is not None:

@@ -1,16 +1,18 @@
 import streamlit as st
 import TP_BeautifulSoup4 as scraper # Importe le module de scraping
 import requests # Nécessaire pour définir les headers
+import mongo_connect as db_connector # Importer pour la sauvegarde optionnelle
+from pymongo.errors import PyMongoError # Pour la sauvegarde optionnelle
 
 # --- Titre spécifique à la page ---
 st.title("🚀 Scraper un Article Spécifique")
 st.write("Entrez l'URL d'un article du Blog du Modérateur pour en extraire les informations.")
 
 # --- Champ d'entrée pour l'URL ---
-article_url = st.text_input("URL de l'article à scraper", placeholder="https://www.blogdumoderateur.com/...")
+article_url = st.text_input("URL de l'article à scraper", placeholder="https://www.blogdumoderateur.com/...", key="scrape_url")
 
 # --- Bouton pour lancer le scraping ---
-scrape_button = st.button("Scraper cet Article")
+scrape_button = st.button("Scraper cet Article", key="scrape_button")
 
 # --- Logique de scraping et affichage ---
 if scrape_button and article_url:
@@ -22,25 +24,33 @@ if scrape_button and article_url:
         }
         with st.spinner(f"Scraping de l'article : {article_url}..."):
             try:
-                # Note: Nous supposons que scrape_article_details récupère TOUTES les infos
-                # Si ce n'est pas le cas, il faudra adapter TP_BeautifulSoup4.py
-                # ou créer une fonction dédiée pour scraper *tous* les champs d'un seul article.
-                # Pour l'instant, on utilise la fonction existante.
-                article_data = scraper.scrape_article_details(article_url, headers)
+                # Utiliser la nouvelle fonction pour obtenir tous les détails
+                article_data = scraper.scrape_article_full_details(article_url, headers)
 
-                if not article_data or (article_data.get('summary') is None and article_data.get('author') is None):
+                if article_data is None or article_data.get('title') is None: # Vérifier si le scraping a échoué ou n'a rien trouvé d'essentiel
                      st.error("Impossible de scraper les détails de cet article. Vérifiez l'URL ou la structure de la page.")
                 else:
                     st.success("Scraping terminé !")
 
                     # Afficher les informations récupérées
-                    st.subheader(f"Détails pour : {article_url}") # On n'a pas le titre ici, sauf si on modifie la fonction
+                    if article_data.get("title"):
+                        st.subheader(f"Article : {article_data['title']}")
+                    else:
+                         st.subheader(f"Détails pour : {article_url}")
 
-                    if article_data.get("author"):
-                        st.write(f"👤 **Auteur:** {article_data['author']}")
-                    # On n'a pas la date ou la catégorie avec la fonction actuelle
-                    # if article_data.get("date_iso"): st.write(f"📅 **Date:** {article['date_iso']}")
-                    # if article_data.get("subcategory"): st.write(f"🏷️ **Catégorie:** {article['subcategory']}")
+                    # Afficher la miniature principale
+                    if article_data.get("thumbnail"):
+                        st.image(article_data["thumbnail"], caption="Image principale", use_column_width=True)
+
+                    # Métadonnées
+                    meta_info = []
+                    if article_data.get("author"): meta_info.append(f"👤 **Auteur:** {article_data['author']}")
+                    if article_data.get("date_iso"): meta_info.append(f"📅 **Date:** {article_data['date_iso']}")
+                    elif article_data.get("date_display"): meta_info.append(f"📅 **Date:** {article_data['date_display']}")
+                    # Subcategory n'est pas scrapée ici, donc on ne l'affiche pas
+                    # if article_data.get("subcategory"): meta_info.append(f"🏷️ **Catégorie:** {article_data['subcategory']}")
+                    if meta_info: st.write(" | ".join(meta_info))
+
 
                     # Afficher le résumé
                     if article_data.get("summary"):
@@ -53,25 +63,31 @@ if scrape_button and article_url:
                     content_images = article_data.get("content_images", [])
                     if content_images:
                         st.write(f"**{len(content_images)} Image(s) trouvée(s) dans le contenu :**")
-                        for img_data in content_images:
-                            st.image(img_data.get("url"), caption=img_data.get("caption_or_alt", ""), use_column_width=True)
+                        with st.expander("Voir les images du contenu"):
+                            for img_data in content_images:
+                                st.image(img_data.get("url"), caption=img_data.get("caption_or_alt", ""), use_column_width=True)
                     else:
                         st.write("Aucune image trouvée dans le contenu.")
 
-                    # Optionnel : Bouton pour sauvegarder dans MongoDB
-                    # Nécessiterait d'importer mongo_connect et d'ajouter la logique d'insertion ici
-                    # if st.button("Sauvegarder cet article dans MongoDB"):
-                    #     collection = db_connector.connect_to_mongo()
-                    #     if collection is not None:
-                    #         try:
-                    #             # Il faudrait récupérer TOUTES les données (titre, thumb, etc.) pour que ce soit utile
-                    #             # insert_result = collection.insert_one(article_data_complet)
-                    #             # st.success(f"Article sauvegardé avec l'ID: {insert_result.inserted_id}")
-                    #             st.warning("Fonctionnalité de sauvegarde non implémentée avec les données actuelles.")
-                    #         except Exception as e:
-                    #             st.error(f"Erreur lors de la sauvegarde : {e}")
-                    #     else:
-                    #         st.error("Connexion à MongoDB échouée, impossible de sauvegarder.")
+                    # Bouton pour sauvegarder dans MongoDB
+                    st.divider()
+                    if st.button("Sauvegarder cet article dans MongoDB", key="save_scraped"):
+                        collection = db_connector.connect_to_mongo()
+                        if collection is not None:
+                            try:
+                                # Vérifier si l'URL existe déjà pour éviter les doublons
+                                existing = collection.find_one({'url': article_data['url']})
+                                if existing:
+                                    st.warning(f"Cet article (URL: {article_data['url']}) existe déjà dans la base de données (ID: {existing['_id']}).")
+                                else:
+                                    insert_result = collection.insert_one(article_data)
+                                    st.success(f"Article sauvegardé avec succès ! (ID: {insert_result.inserted_id})")
+                            except PyMongoError as e:
+                                st.error(f"Erreur MongoDB lors de la sauvegarde : {e}")
+                            except Exception as e:
+                                st.error(f"Erreur inattendue lors de la sauvegarde : {e}")
+                        else:
+                            st.error("Connexion à MongoDB échouée, impossible de sauvegarder.")
 
 
             except requests.exceptions.RequestException as e:

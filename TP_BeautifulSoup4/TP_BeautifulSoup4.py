@@ -179,3 +179,101 @@ def scrape_article_previews(listing_url):
         print(f"An unexpected error occurred while scraping {listing_url}: {e}")
         return []
 
+
+def scrape_article_full_details(article_url, headers):
+
+    data = {
+        'url': article_url,
+        'title': None,
+        'summary': None,
+        'author': None,
+        'date_display': None,
+        'date_iso': None,
+        'thumbnail': None, # This will be the main article image (header image)
+        'subcategory': None, # Typically not found on the article page itself
+        'content_images': []
+    }
+
+    try:
+        # Optional: Add a small delay
+        # time.sleep(0.5)
+        response = requests.get(article_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # --- Find Main Header ---
+        main_header = soup.find('header', class_='article-header')
+        if not main_header:
+            print(f"  -> Warning: Main article header not found on {article_url}")
+            # Still try to find content images below, but header info will be missing
+        else:
+            # --- Extract Title ---
+            title_tag = main_header.find('h1', class_='entry-title')
+            data['title'] = title_tag.get_text(strip=True) if title_tag else None
+
+            # --- Extract Summary (Hat) ---
+            summary_div = main_header.find('div', class_='article-hat')
+            summary_p = summary_div.find('p') if summary_div else None
+            data['summary'] = summary_p.get_text(strip=True) if summary_p else None
+
+            # --- Extract Author & Date (from meta section within header) ---
+            meta_section = main_header.find('div', class_='entry-meta', recursive=False) # Look directly within header
+            if meta_section:
+                meta_info_div = meta_section.find('div', class_='meta-info')
+                if meta_info_div:
+                    # Author
+                    byline_span = meta_info_div.find('span', class_='byline')
+                    if byline_span:
+                        author_a = byline_span.find('a')
+                        data['author'] = author_a.get_text(strip=True) if author_a else None
+                    # Date
+                    posted_on_span = meta_info_div.find('span', class_='posted-on')
+                    if posted_on_span:
+                        time_tag = posted_on_span.find('time', class_='published')
+                        if time_tag:
+                            data['date_display'] = time_tag.get_text(strip=True)
+                            if time_tag.has_attr('datetime'):
+                                try:
+                                    date_iso_str = time_tag['datetime']
+                                    # Extract only the date part YYYY-MM-DD
+                                    data['date_iso'] = datetime.fromisoformat(date_iso_str).strftime('%Y-%m-%d')
+                                except ValueError:
+                                    pass # Keep date_iso as None if parsing fails
+
+            # --- Extract Thumbnail/Header Image ---
+            figure_hat_img = main_header.find('figure', class_='article-hat-img')
+            if figure_hat_img:
+                img_tag = figure_hat_img.find('img')
+                if img_tag:
+                    data['thumbnail'] = img_tag.get('data-lazy-src') or img_tag.get('src')
+
+        # --- Extract Content Images (using the existing logic, applied to the whole soup) ---
+        content_div = soup.find('div', class_='entry-content') # Find main content area
+        if content_div:
+            figures = content_div.find_all('figure')
+            if figures:
+                for figure in figures:
+                    img_tag = figure.find('img')
+                    if img_tag:
+                        img_url = img_tag.get('data-lazy-src') or img_tag.get('src')
+                        if not img_url or img_url.startswith('data:image'): continue
+                        figcaption = figure.find('figcaption')
+                        caption = figcaption.get_text(strip=True) if figcaption else img_tag.get('alt', '')
+                        data['content_images'].append({'url': img_url, 'caption_or_alt': caption})
+            else: # Fallback
+                images_in_content = content_div.find_all('img')
+                for img_tag in images_in_content:
+                    img_url = img_tag.get('data-lazy-src') or img_tag.get('src')
+                    if not img_url or img_url.startswith('data:image'): continue
+                    caption = img_tag.get('alt', '')
+                    data['content_images'].append({'url': img_url, 'caption_or_alt': caption})
+
+        return data # Return the dictionary with all found data
+
+    except requests.exceptions.RequestException as e:
+        print(f"  -> Request Error fetching full details from {article_url}: {e}")
+        return None # Indicate failure
+    except Exception as e:
+        print(f"  -> Error parsing full details from {article_url}: {e}")
+        # Return potentially partial data found so far in case of parsing error
+        return data
