@@ -1,4 +1,10 @@
+<div align="center">
+
 # BDM Scraper & Explorer
+   
+[![wakatime](https://wakatime.com/badge/user/a16f794f-b91d-4818-8dfc-d768ce605ece/project/a6c21011-3204-4b5a-a1ce-39665c6ea52b.svg)](https://wakatime.com/badge/user/a16f794f-b91d-4818-8dfc-d768ce605ece/project/a6c21011-3204-4b5a-a1ce-39665c6ea52b)
+
+</div>
 
 Ce projet est un outil de web scraping conçu pour extraire des informations d'articles du site "Blog du Modérateur" (blogdumoderateur.com) et les stocker dans une base de données MongoDB. Il fournit également une interface web simple construite avec Streamlit pour lancer des scrapings et explorer les données collectées.
 
